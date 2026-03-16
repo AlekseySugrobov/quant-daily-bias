@@ -26,7 +26,14 @@ DEFAULT_FEATURE_OUTPUT = FeatureOutputSpec(
         "bias_prediction",
         "target",
         "target_hit",
-        "opposite_target_hit"
+        "opposite_target_hit", 
+        "target_hit_time",
+        "target_hit_1h",
+        "target_hit_15m",
+        "opposite_target_hit_time",
+        "opposite_target_hit_1h",
+        "opposite_target_hit_15m",
+        "first_hit_side"
     ],
     dropna_subset= [
         "prev_type",

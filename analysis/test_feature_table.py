@@ -12,7 +12,8 @@ df = fetch_range(
 )
 
 df = add_sessions(df)
+
 sessions = build_session_candles(df)
-features = build_feature_table(sessions)
+features = build_feature_table(sessions, df)
 
 print(features)

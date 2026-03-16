@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: bias
+Version: 0.1.0
+Summary: Market statistics project
+Requires-Python: >=3.10

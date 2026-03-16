@@ -1,0 +1,8 @@
+[project]
+name = "bias"
+version = "0.1.0"
+description = "Market statistics project"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["."]

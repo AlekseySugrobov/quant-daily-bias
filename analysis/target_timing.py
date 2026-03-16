@@ -111,7 +111,7 @@ def build_target_timing_features(
 
     timing_results: list[TimingResult] = []
 
-    for row in result.itertuples(index=False):
+    for row in timing_input.itertuples(index=False):
 
         session_bars = intraday_groups.get(row.session)
 

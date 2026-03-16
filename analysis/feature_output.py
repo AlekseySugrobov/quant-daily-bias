@@ -23,7 +23,10 @@ DEFAULT_FEATURE_OUTPUT = FeatureOutputSpec(
         "prev_close_vs_prev2_range",
         "prev_close_vs_prev_range",
         "close_position_synced",
-        "bias_prediction"
+        "bias_prediction",
+        "target",
+        "target_hit",
+        "opposite_target_hit"
     ],
     dropna_subset= [
         "prev_type",

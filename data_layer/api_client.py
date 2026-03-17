@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
-from dotenv import load_dotenv
 import os
+from datetime import datetime, timezone
 
+from dotenv import load_dotenv
 import requests
 import pandas as pd
 
@@ -20,7 +20,7 @@ def check_api() -> dict:
 
 def _get(endpoint: str, params: dict) -> dict:
     url = f"{BASE_URL}{endpoint}"
-    r = requests.get(url=url, params=params)
+    r = requests.get(url=url, params=params, timeout=120)
     r.raise_for_status()
     return r.json()
 
@@ -33,7 +33,7 @@ def _normalize_candles(candles: list) -> list[dict]:
             "high": c["h"],
             "low": c["l"],
             "close": c["c"],
-            "volume": c.get("v", None)
+            "volume": c.get("v")
         })    
     return rows
 

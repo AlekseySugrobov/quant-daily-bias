@@ -79,7 +79,7 @@ def classify_bias(prev_close_vs_prev2_range: str,
 
 
 class PreviousDayPositionHandler(FeatureHandler):
-    REQUIRED_COLUMNS = {"high", "low", "close"}
+    REQUIRED_COLUMNS = {"high", "low", "close", "session"}
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         result = df.copy()
@@ -92,52 +92,38 @@ class PreviousDayPositionHandler(FeatureHandler):
         result["prev2_low"] = result["low"].shift(2)
         result["prev2_range"] = result["prev2_high"] - result["prev2_low"]
 
-        result["sweep_type"] = [
-            classify_sweep_type(prev_high, prev_low, prev2_high, prev2_low)
-            for prev_high, prev_low, prev2_high, prev2_low in zip(
-                result["prev_high"],
-                result["prev_low"],
-                result["prev2_high"],
-                result["prev2_low"]
-            )
-        ]
+        result["sweep_type"] = result.apply(
+            lambda row: classify_sweep_type(row["prev_high"], row["prev_low"], row["prev2_high"], row["prev2_low"]),
+            axis=1
+        )
 
-        result["prev_close_vs_prev2_range_position"] = [
-            calculate_prev_close_vs_range(prev_close, prev2_high, prev2_low)
-            for prev_close, prev2_high, prev2_low in zip(
-                result["prev_close"],
-                result["prev2_high"],
-                result["prev2_low"]
-            )
-        ]
+        result["prev_close_vs_prev2_range_position"] = result.apply(
+            lambda row: calculate_prev_close_vs_range(row["prev_close"], row["prev2_high"], row["prev2_low"]),
+            axis=1
+        )
 
-        result["prev_close_vs_prev2_range"] = [
-            classify_prev_close_vs_range(position)
-            for position in result["prev_close_vs_prev2_range_position"]
-        ]
+        result["prev_close_vs_prev2_range"] = result.apply(
+                lambda row: classify_prev_close_vs_range(row["prev_close_vs_prev2_range_position"]),
+                axis=1
+        )
 
-        result["prev_close_vs_prev_range"] = [
-            calculate_prev_close_vs_range(prev_close, prev_high, prev_low)
-            for prev_close, prev_high, prev_low in zip(
-                result["prev_close"],
-                result["prev_high"],
-                result["prev_low"]
-            )
-        ]
+        result["prev_close_vs_prev_range_position"] = result.apply(
+            lambda row: calculate_prev_close_vs_range(row["prev_close"], row["prev_high"], row["prev_low"]),
+            axis=1
+        )
 
-        result["prev_close_vs_prev_range"] = [
-            classify_prev_close_vs_range(position)
-            for position in result["prev_close_vs_prev_range"]
-        ]
+        result["prev_close_vs_prev_range"] = result.apply(
+            lambda row: classify_prev_close_vs_range(row["prev_close_vs_prev_range_position"]),
+            axis=1
+        )
 
         result["close_position_synced"] = result["prev_close_vs_prev_range"] == result["prev_close_vs_prev2_range"]
 
-        result["bias_prediction"] = [
-            classify_bias(prev_close_vs_prev2_range, prev_close_vs_prev_range)
-            for prev_close_vs_prev2_range, prev_close_vs_prev_range in zip(
-                result["prev_close_vs_prev2_range"],
-                result["prev_close_vs_prev_range"]
-            )
-        ]
+        result["bias_prediction"] = result.apply(
+            lambda row: classify_bias(row["prev_close_vs_prev2_range"], row["prev_close_vs_prev_range"]),
+            axis=1
+        )
+
+        result.drop(columns=["prev_close_vs_prev2_range_position", "prev_close_vs_prev_range_position"], inplace=True)
 
         return result

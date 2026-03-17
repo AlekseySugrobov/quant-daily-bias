@@ -48,7 +48,9 @@ def format_feature_output(
         df: pd.DataFrame,
         spec: FeatureOutputSpec = DEFAULT_FEATURE_OUTPUT
 ) -> pd.DataFrame:
-    result = df.rename(columns = spec.rename_map)
-    result = result[spec.columns]
-    result = result.dropna(subset=spec.dropna_subset)
-    return result
+    renamed = df.rename(columns=spec.rename_map)
+    missing = [col for col in spec.columns if col not in renamed.columns]
+    if missing:
+        raise ValueError(f"Missing columns in Dataframe: {missing}")
+
+    return renamed[spec.columns].dropna(subset=spec.dropna_subset)

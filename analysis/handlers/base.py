@@ -26,7 +26,10 @@ class FeatureHandler(ABC):
         self.validate_columns(df)
         result = self.process(df)
         if self.next_handler is not None:
-            return self.next_handler.handle(result)
+            try:
+                return self.next_handler.handle(result)
+            except Exception as e:
+                raise RuntimeError(f"Error in chain after {self.__class__.__name__}: {e}") from e
         return result
     
     @abstractmethod

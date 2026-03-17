@@ -13,15 +13,19 @@ DAY_ENDPOINT = "/market-data/day"
 RANGE_ENDPOINT = "/market-data/range"
 HEALTH_ENDPOINT = "/health"
 
-def check_api():
-    r = requests.get(BASE_URL + HEALTH_ENDPOINT, timeout=5)
+def check_api() -> dict:
+    r = requests.get(f"{BASE_URL}{HEALTH_ENDPOINT}", timeout=5)
     r.raise_for_status()
-    return r.json
+    return r.json()
 
+def _get(endpoint: str, params: dict) -> dict:
+    url = f"{BASE_URL}{endpoint}"
+    r = requests.get(url=url, params=params)
+    r.raise_for_status()
+    return r.json()
 
-def _normalize_candles(candles):
+def _normalize_candles(candles: list) -> list[dict]:
     rows = []
-
     for c in candles:
         rows.append({
             "timestamp": c["t_open"],
@@ -30,67 +34,39 @@ def _normalize_candles(candles):
             "low": c["l"],
             "close": c["c"],
             "volume": c.get("v", None)
-        })
-    
+        })    
     return rows
 
-def _to_dataframe(rows):
+def _to_dataframe(rows: list) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-
     df = df.set_index("timestamp").sort_index()
-
     return df
 
-def fetch_range(symbol, timeframe, start, end = None) -> pd.DataFrame:
-    url = f"{BASE_URL}/market-data/range"
-
+def fetch_range(symbol: str, timeframe: str, start: str, end: str | None = None) -> pd.DataFrame:
     if end is None:
         end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
     params = {
         "symbol": symbol,
         "tf": timeframe, 
         "from": start, 
         "to": end
     }
-
-    r = requests.get(url=url, params=params)
-
-    r.raise_for_status()
-
-    data = r.json()
-
+    data = _get(RANGE_ENDPOINT, params)
     rows = _normalize_candles(data["candles"])
-
     return _to_dataframe(rows)
 
-def fetch_day(symbol, timeframe, date=None):
-    url = f"{BASE_URL}/market-data/day"
-
+def fetch_day(symbol: str, timeframe: str, date: str | None=None) -> tuple[pd.DataFrame, dict]:
     params = {
         "symbol": symbol,
         "tf": timeframe,
     }
-
-    if date is not None:
-        params["date"] = date
-
-    r = requests.get(url=url, params=params)
-
-    r.raise_for_status()
-
-    data = r.json()
-
+    data = _get(DAY_ENDPOINT, params)
     rows = _normalize_candles(data["candles"])
-    
     df = _to_dataframe(rows)
-
     meta = {
         "session_id": data.get("session_id"),
         "requested_session_id": data.get("requested_session_id"),
         "timezone": data.get("timezone")
     }
-
     return df, meta

@@ -1,5 +1,3 @@
-import re
-
 import pandas as pd
 
 from analysis.handlers.base import FeatureHandler
@@ -36,16 +34,13 @@ def build_target_hit(
 
 
 class TargetFeatureHandler(FeatureHandler):
-    REQUIRED_COLUMNS = {"bias_prediction", "high", "low"}
+    REQUIRED_COLUMNS = {"bias_prediction", "high", "low", "prev_high", "prev_low"}
 
     def process(self, df: pd.DataFrame) -> pd.DataFrame:
         result = df.copy()
 
         result["target"] = build_target_from_bias_prediction(result["bias_prediction"])
-
-        result["prev_high"] = result["high"].shift(1)
-        result["prev_low"] = result["low"].shift(1)
-
+        
         result["target_hit"], result["opposite_target_hit"] = build_target_hit(
             result["target"],
             result["high"],

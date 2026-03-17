@@ -4,11 +4,14 @@ from analysis.handlers.prev_features import PrevFeaturesHandler
 from analysis.handlers.target_features import TargetFeatureHandler
 
 def build_feature_chain():
-    prev_handler = PrevFeaturesHandler()
-    calendar_handler = CalendarFeaturesHandler()
-    previous_day_position_handler = PreviousDayPositionHandler()
-    target_feature_handler = TargetFeatureHandler()
+    handlers = [
+        PrevFeaturesHandler(),
+        CalendarFeaturesHandler(),
+        PreviousDayPositionHandler(),
+        TargetFeatureHandler()
+    ]
 
-    prev_handler.set_next(calendar_handler).set_next(previous_day_position_handler).set_next(target_feature_handler)
+    for current, next_ in zip(handlers, handlers[1:]):
+        current.set_next(next_)
 
-    return prev_handler
+    return handlers[0]

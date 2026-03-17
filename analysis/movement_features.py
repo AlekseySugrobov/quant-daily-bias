@@ -20,6 +20,7 @@ def _compute_movement(
     
     movement_start_hour = movement_start_time.hour
     movement_start_after_2h = adjust_movement_start_after_2h(session_bars, target, target_hit_time)
+    movement_start_after_2h = movement_start_after_2h.hour if movement_start_after_2h else None
 
     target_tf, trigger_side, trigger_type = find_trigger(session_bars, target, movement_start_time)
 

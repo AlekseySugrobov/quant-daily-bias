@@ -33,7 +33,12 @@ DEFAULT_FEATURE_OUTPUT = FeatureOutputSpec(
         "opposite_target_hit_time",
         "opposite_target_hit_1h",
         "opposite_target_hit_15m",
-        "first_hit_side"
+        "first_hit_side",
+        "movement_start_hour",
+        "movement_start_after_2h",
+        "trigger_tf",
+        "trigger_side",
+        "trigger_type"
     ],
     dropna_subset= [
         "prev_type",

@@ -11,8 +11,8 @@ FIRST_HIT_NO_TARGET = "NO_TARGET"
 
 @dataclass(frozen=True)
 class TimingResult:
-    target_hit_time: pd.Timestamp | pd.NaT
-    opposite_target_hit_time: pd.Timestamp | pd.NaT
+    target_hit_time: pd.Timestamp | None
+    opposite_target_hit_time: pd.Timestamp | None
     first_hit_side: str
 
 def _first_hit_time_pdh(bars: pd.DataFrame, level: float) -> pd.Timestamp | pd.NaT:
@@ -61,6 +61,9 @@ def _compute_session_timing(
         prev_low: float,
         session_bars: pd.DataFrame,
 ) -> TimingResult:
+    
+    if session_bars.empty:
+        return TimingResult(pd.NaT, pd.NaT, FIRST_HIT_NO_TARGET if target == "NO_TARGET" else FIRST_HIT_NO_HIT)
 
     if target == "NO_TARGET":
         return TimingResult(pd.NaT, pd.NaT, FIRST_HIT_NO_TARGET)
@@ -81,11 +84,29 @@ def _compute_session_timing(
 
     return TimingResult(target_hit_time, opposite_target_hit_time, first_hit_side)
 
+def _timing_result_to_dict(item: TimingResult) -> dict:
+
+    def extract_hours(ts):
+        return ts.hour if pd.notna(ts) else pd.NA
+    
+    def extract_15m(ts):
+        return (ts.minute // 15) + 1 if pd.notna(ts) else pd.NA
+
+    return {
+        "target_hit_time": item.target_hit_time,
+        "target_hit_1h": extract_hours(item.target_hit_time),
+        "target_hit_15m": extract_15m(item.target_hit_time),
+        "opposite_target_hit_time": item.opposite_target_hit_time,
+        "opposite_target_hit_1h": extract_hours(item.opposite_target_hit_time),
+        "opposite_target_hit_15m": extract_15m(item.opposite_target_hit_time),
+        "first_hit_side": item.first_hit_side
+    }
+
 def build_target_timing_features(
         sessions: pd.DataFrame,
         intraday_data: pd.DataFrame
 ) -> pd.DataFrame:
-    required_session_columns = {"session", "target", "high", "low"}
+    required_session_columns = {"session", "target", "high", "low", "prev_high", "prev_low"}
     required_intraday_columns = {"session", "high", "low", "ny_time"}
 
     missing_session_columns = required_session_columns - set(sessions.columns)
@@ -99,9 +120,6 @@ def build_target_timing_features(
     
     result = sessions.copy()
 
-    result["prev_high"] = result["high"].shift(1)
-    result["prev_low"] = result["low"].shift(1)
-
     intraday_groups = {
         session_id: group.sort_values("ny_time")
         for session_id, group in intraday_data.groupby("session", sort=True)
@@ -113,40 +131,18 @@ def build_target_timing_features(
 
     for row in timing_input.itertuples(index=False):
 
-        session_bars = intraday_groups.get(row.session)
-
-        if session_bars is None or session_bars.empty:
-            if row.target == "NO_TARGET":
-                timing_results.append(TimingResult(pd.NaT, pd.NaT, FIRST_HIT_NO_TARGET))
-            else:
-                timing_results.append(TimingResult(pd.NaT, pd.NaT, FIRST_HIT_NO_HIT))
-            continue
-
+        session_bars = intraday_groups.get(row.session, pd.DataFrame())
         timing_results.append(_compute_session_timing(row.target, row.prev_high, row.prev_low, session_bars))
         
     timing_df = pd.DataFrame(
         [
-            {
-                "target_hit_time": item.target_hit_time,
-                "target_hit_1h": item.target_hit_time.hour if pd.notna(item.target_hit_time) else pd.NA,
-                "target_hit_15m" : (item.target_hit_time.minute // 15) + 1 if pd.notna(item.target_hit_time) else pd.NA,
-                "opposite_target_hit_time": item.opposite_target_hit_time,
-                "opposite_target_hit_1h": item.opposite_target_hit_time.hour if pd.notna(item.opposite_target_hit_time) else pd.NA,
-                "opposite_target_hit_15m": (item.opposite_target_hit_time.minute // 15) + 1 if pd.notna(item.opposite_target_hit_time) else pd.NA,
-                "first_hit_side": item.first_hit_side
-            }
+            _timing_result_to_dict(item)
             for item in timing_results
         ],
         index=result.index
     )
 
-    result["target_hit_time"] = timing_df["target_hit_time"]
-    result["opposite_target_hit_time"] = timing_df["opposite_target_hit_time"]
-    result["target_hit_1h"] = timing_df["target_hit_1h"]
-    result["target_hit_15m"] = timing_df["target_hit_15m"]
-    result["opposite_target_hit_1h"] = timing_df["opposite_target_hit_1h"]
-    result["opposite_target_hit_15m"] = timing_df["opposite_target_hit_15m"]
-    result["first_hit_side"] = timing_df["first_hit_side"]
+    result = pd.concat([result, timing_df], axis=1)
 
     result = result.drop(columns=["prev_high", "prev_low"])
 
